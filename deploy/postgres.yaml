@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: yaroslava-postgres
+  labels:
+    app: yaroslava
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: yaroslava
+    tier: postgres
+  clusterIP: None
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: yaroslava-postgres-pvc
+  labels:
+    app: yaroslava
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    app: yaroslava-postgres
+spec:
+  selector:
+    matchLabels:
+      app: yaroslava
+      tier: postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: yaroslava
+        tier: postgres
+    spec:
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: yaroslava-postgres-pvc
+
+      containers:
+        - image: postgres:15.2
+          name: postgres
+          ports:
+            - containerPort: 5432
+              name: postgres
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          env:
+            - name: POSTGRES_DB
+              value: yaroslava
+            - name: POSTGRES_USER
+              value: yaroslava
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-user-pass
+                  key: password

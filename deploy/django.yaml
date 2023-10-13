@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: yaroslava
+  labels:
+    app: django
+spec:
+  ports:
+    - port: 8000
+  selector:
+    app: yaroslava
+    tier: app
+  type: LoadBalancer
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: yaroslava-app-pvc
+  labels:
+    app: yaroslava
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yaroslava
+  labels:
+    app: yaroslava
+spec:
+  selector:
+    matchLabels:
+      app: yaroslava
+      tier: app
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: yaroslava
+        tier: app
+    spec:
+      volumes:
+        - name: yaroslava-app-data
+          persistentVolumeClaim:
+            claimName: yaroslava-app-pvc
+      containers:
+
+        - image: yaroslava:latest
+          imagePullPolicy: Never
+          name: app
+          ports:
+            - containerPort: 8080
+              name: app
+          volumeMounts:
+            - name: yaroslava-app-data
+              mountPath: /vol/web
+          env:
+            - name: DB_HOST
+              value: yaroslava-postgres
+            - name: DB_NAME
+              value: yaroslava
+            - name: DB_USER
+              value: yaroslava
+            - name: ALLOWED_HOSTS
+              value: '127.0.0.1,localhost'
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: db-user-pass
+                  key: password
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django
+                  key: secret
+
+        - image: yaroslava-proxy:latest
+          imagePullPolicy: Never
+          name: proxy
+          ports:
+            - containerPort: 8000
+              name: proxy
+          volumeMounts:
+            - name: yaroslava-app-data
+              mountPath: /vol/web
+          env:
+            - name: APP_HOST
+              value: '127.0.0.1'
+            - name: APP_PORT
+              value: '8080'
