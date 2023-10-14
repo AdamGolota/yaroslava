@@ -22,10 +22,11 @@ metadata:
     app: yaroslava
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
+  storageClassName: efs-sc
   resources:
     requests:
-      storage: 10Gi
+      storage: 5Gi
 
 ---
 
@@ -54,8 +55,7 @@ spec:
             claimName: yaroslava-app-pvc
       containers:
 
-        - image: yaroslava:latest
-          imagePullPolicy: Never
+        - image: 574449501091.dkr.ecr.eu-central-1.amazonaws.com/yaroslava-k8s-app:latest
           name: app
           ports:
             - containerPort: 8080
@@ -65,13 +65,13 @@ spec:
               mountPath: /vol/web
           env:
             - name: DB_HOST
-              value: yaroslava-postgres
+              value: yaroslava-k8s-db.chcbt5vj5vf1.eu-central-1.rds.amazonaws.com
             - name: DB_NAME
               value: yaroslava
             - name: DB_USER
               value: yaroslava
             - name: ALLOWED_HOSTS
-              value: '127.0.0.1,localhost'
+              value: 'a85c1d44f1ede463dad43eae5d7b2b50-1879698084.eu-central-1.elb.amazonaws.com'
             - name: DB_PASS
               valueFrom:
                 secretKeyRef:
@@ -83,8 +83,7 @@ spec:
                   name: django
                   key: secret
 
-        - image: yaroslava-proxy:latest
-          imagePullPolicy: Never
+        - image: 574449501091.dkr.ecr.eu-central-1.amazonaws.com/yaroslava-k8s-proxy:latest
           name: proxy
           ports:
             - containerPort: 8000

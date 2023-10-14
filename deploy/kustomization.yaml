@@ -1,3 +1,7 @@
+secretGenerator:
+  - name: db-user-pass
+    literals:
+      - password=samplepassword123
 resources:
-  - postgres.yaml
   - django.yaml
+  - storageclass.yaml
